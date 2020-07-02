@@ -1,28 +1,23 @@
-#!/usr/bin/env python
-
 # Core libraries
 import os
 import sys
-sys.path.append("../")
 import cv2
 import json
 import random
 import numpy as np
-from PIL import Image
 
 # PyTorch
 import torch
 from torch.utils import data
 
 # Local libraries
-from utilities.DataUtils import DataUtils
-from utilities.ImageUtils import ImageUtils
+from utilities.utils import *
 
 """
 Descriptor
 """
 
-class OpenSetCows2019(data.Dataset):
+class OpenSetCows2020(data.Dataset):
 	# Class constructor
 	def __init__(	self,
 					fold,
@@ -38,9 +33,7 @@ class OpenSetCows2019(data.Dataset):
 		"""
 
 		# The root directory for the dataset itself
-		if os.path.exists("/home/will"): self.__root = "/home/will/work/1-RA/src/Datasets/data/OpenSetCows2019"
-		elif os.path.exists("/home/ca0513"): self.__root = "/home/ca0513/ATI-Pilot-Project/src/Datasets/data/OpenSetCows2019"
-		elif os.path.exists("/mnt/storage/home/ca0513"): self.__root = "/mnt/storage/home/ca0513/ATI-Pilot-Project/src/Datasets/data/OpenSetCows2019"
+		self.__root = "/datasets/OpenSetCows2020"
 
 		# The fold we're currently considering
 		self.__fold = fold
@@ -65,8 +58,8 @@ class OpenSetCows2019(data.Dataset):
 		self.__test_images_dir = os.path.join(self.__root, "split/test")
 
 		# Retrieve the number of classes from these
-		self.__train_folders = DataUtils.allFoldersAtDir(self.__train_images_dir)
-		self.__test_folders = DataUtils.allFoldersAtDir(self.__test_images_dir)
+		self.__train_folders = allFoldersAtDir(self.__train_images_dir)
+		self.__test_folders = allFoldersAtDir(self.__test_images_dir)
 		assert len(self.__train_folders) == len(self.__test_folders)
 		self.__num_classes = len(self.__train_folders)
 
@@ -93,16 +86,12 @@ class OpenSetCows2019(data.Dataset):
 		self.__files = {}
 
 		"""
-		Class objects
-		"""
-
-		"""
 		Class setup
 		"""
 
 		# Create dictionaries of categories: filepaths
-		train_files = {os.path.basename(f):DataUtils.allFilesAtDirWithExt(f, ".jpg") for f in self.__train_folders}
-		test_files = {os.path.basename(f):DataUtils.allFilesAtDirWithExt(f, ".jpg") for f in self.__test_folders}
+		train_files = {os.path.basename(f):allFilesAtDirWithExt(f, ".jpg") for f in self.__train_folders}
+		test_files = {os.path.basename(f):allFilesAtDirWithExt(f, ".jpg") for f in self.__test_folders}
 
 		# List of categories to be removed
 		remove = []
@@ -135,12 +124,13 @@ class OpenSetCows2019(data.Dataset):
 	def __len__(self):
 		return len(self.__files[self.__split])
 
+	# Index retrieval method
 	def __getitem__(self, index):
 		# Get and load the anchor image
 		img_path = self.__files[self.__split][index]
 		
 		# Load the anchor image
-		img_anchor = self.__loadResizeImage(img_path)
+		img_anchor = loadResizeImage(img_path, self.__img_size)
 		
 		# Retrieve the class/label this index refers to
 		current_category = self.__retrieveCategoryForFilepath(img_path)
@@ -156,7 +146,6 @@ class OpenSetCows2019(data.Dataset):
 		label_neg = np.array([int(label_neg)])
 
 		# For sanity checking, visualise the triplet
-		# if self.__split == "test":
 		# self.__visualiseTriplet(img_anchor, img_pos, img_neg, label_anchor)
 
 		# Transform to pyTorch form
@@ -234,7 +223,7 @@ class OpenSetCows2019(data.Dataset):
 		img_path = random.choice(possible_list)
 
 		# Load and return the image
-		img = self.__loadResizeImage(img_path)
+		img = loadResizeImage(img_path, self.__img_size)
 		return img
 
 	def __retrieveNegative(self, category, filepath):
@@ -250,40 +239,8 @@ class OpenSetCows2019(data.Dataset):
 		img_path = random.choice(self.__sorted_files[self.__split][random_category])
 
 		# Load and return the image along with the selected label
-		img = self.__loadResizeImage(img_path)
+		img = loadResizeImage(img_path, self.__img_size)
 		return img, random_category
-
-	# Load an image into memory and resize it as required
-	def __loadResizeImage(self, img_path):
-		# # Load the image
-		# img = cv2.imread(img_path)
-
-		# # Resize it proportionally to a maximum of img_size
-		# img = ImageUtils.proportionallyResizeImageToMax(img, self.__img_size[0], self.__img_size[1])
-
-		# pos_h = int((self.__img_size[0] - img.shape[0])/2)
-		# pos_w = int((self.__img_size[1] - img.shape[1])/2)
-
-		# # Paste it into an zeroed array of img_size
-		# new_img = np.zeros((self.__img_size[0], self.__img_size[1], 3), dtype=np.uint8)
-		# new_img[pos_h:pos_h+img.shape[0], pos_w:pos_w+img.shape[1], :] = img
-
-		img = Image.open(img_path)
-
-		old_size = img.size
-
-		ratio = float(self.__img_size[0])/max(old_size)
-		new_size = tuple([int(x*ratio) for x in old_size])
-
-		img = img.resize(new_size, Image.ANTIALIAS)
-
-		new_img = Image.new("RGB", (self.__img_size[0], self.__img_size[1]))
-		new_img.paste(img, ((self.__img_size[0]-new_size[0])//2,
-					(self.__img_size[1]-new_size[1])//2))
-
-		new_img = np.array(new_img, dtype=np.uint8)
-
-		return new_img
 
 	"""
 	Getters
@@ -306,89 +263,6 @@ class OpenSetCows2019(data.Dataset):
 	Static methods
 	"""
 
-	@staticmethod
-	def extractErroneousRegions(dataset_location, visualise=False):
-		# Define the errors statically (for now) (image ID: bbox)
-
-		# Definite errors
-		# errors = {	590: [1049,742,437,290],
-		# 			743: [924,96,558,310],
-		# 			2427: [23,422,132,132],
-		# 			2538: [415,425,102,62],
-		# 			2581: [432,168,98,51],
-		# 			2584: [53,169,107,71],
-		# 			2607: [0,219,84,41],
-		# 			2623: [641,419,88,48],
-		# 			2719: [471,0,184,57],
-		# 			2730: [604,262,128,74],
-		# 			2967: [388,262,119,202],
-		# 			3169: [347,350,56,153],
-		# 			3200: [284,199,82,146],
-		# 			3203: [556,37,65,144],
-		# 			3312: [440,4,293,235]		}
-
-		# Possible errors
-		errors = {	162: [893,38,575,279],
-					1140: [516,167,581,455],
-					1538: [245,0,461,333],
-					1803: [69,547,534,166],
-					2654: [175,347,130,48],
-					2654: [161,399,118,57],
-					3122: [56,165,95,96],
-					3200: [284,199,82,146],
-					3200: [352,206,60,135],
-					3530: [95,363,172,360]		}
-
-		# Iterate through each key
-		for image_id, box in errors.items():
-			# Load the image this entry refers to
-			image_path = os.path.join(dataset_location, str(image_id).zfill(6)+".jpg")
-			image = cv2.imread(image_path)
-
-			# Extract the RoI
-			# x1 = box[0]
-			# y1 = box[1]
-			# x2 = box[2]
-			# y2 = box[3]
-			x1 = int(box[0] - box[2]/2)
-			y1 = int(box[1] - box[3]/2)
-			x2 = x1 + int(box[2])
-			y2 = y1 + int(box[3])
-
-			# Clamp any negative values at zero
-			if x1 < 0: x1 = 0
-			if y1 < 0: y1 = 0
-			if x2 < 0: x2 = 0
-			if y2 < 0: y2 = 0
-
-			# Swap components if necessary so that (x1,y1) is always top left
-			# and (x2, y2) is always bottom right
-			if x1 > x2: x1, x2 = x2, x1
-			if y1 > y2: y1, y2 = y2, y1
-
-			RoI = image[y1:y2,x1:x2]
-
-			# Display it if we're supposed to
-			if visualise:
-				# cv2.rectangle(image, (x1,y1),(x2,y2), (255,0,0), 3)
-				# cv2.imshow("Extracted region", RoI)
-				# cv2.waitKey(0)
-				pass
-
-			# Construct path and save
-			save_path = os.path.join(output_dir, str(image_id).zfill(6)+".jpg")
-			cv2.imwrite(save_path, RoI)
-
 # Entry method/unit testing method
 if __name__ == '__main__':
-	# Create a dataset instance
-	# dataset = OpenSetCows2019(0, "2-folds.pkl", split="test")
-
-	# for i in range(dataset.getNumTestingFiles()):
-	# 	test = dataset[i]
-
-	# From a list of erroneous detections (e.g. from RetinaNet)
-	dataset_location = "D:\\OneDrive - University of Bristol\\Work\\1-PostDoc\\Data\\CEADetection\\darknet"
-	output_dir = "D:\\OneDrive - University of Bristol\\Work\\1-PostDoc\\Data\\CEADetection\\RetinaNet-failures\\possible"
-	OpenSetCows2019.extractErroneousRegions(dataset_location, output_dir)
-	
+	pass

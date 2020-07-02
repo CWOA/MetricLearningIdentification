@@ -1,24 +1,20 @@
+# Core libraries
 import os
 import sys
 import cv2
 import pickle
 import random
+import argparse
 import numpy as np
-import seaborn as sns
-import matplotlib.pyplot as plt
-from matplotlib.offsetbox import OffsetImage, AnnotationBbox
-import matplotlib.image as mpimg
-from sklearn.manifold import TSNE
-from sklearn.decomposition import PCA
-import matplotlib.patheffects as PathEffects
 from tqdm import tqdm
 
-# Home windows machine
-if os.path.isdir("D:\\Work"): sys.path.append("D:\\Work\\ATI-Pilot-Project\\src")
-
-# My libraries
-from Utilities.DataUtils import DataUtils
-from Utilities.ImageUtils import ImageUtils
+# Matplotlib / TSNE
+import seaborn as sns
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
+from sklearn.manifold import TSNE
+import matplotlib.patheffects as PathEffects
+from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
 # Data paths
 # all_embedding_train_path = "../train_triplet_cnn_cow_id_temp_x1_full.npz"
@@ -105,187 +101,46 @@ def scatter(x, labels, subtitle=None, overlay_class_examples=False, class_exampl
 		
 	# plt.show()
 	plt.tight_layout()
-	plt.savefig(subtitle)
+	plt.savefig(subtitle+".pdf")
 
 def plotEmbeddings():
 	# Load them into memory
 	all_embedding_train = np.load(all_embedding_train_path)
 	all_embedding_test = np.load(all_embedding_test_path)
-	# known_embedding_train = np.load(known_embedding_train_path)
-	# known_embedding_test = np.load(known_embedding_test_path)
-	# novel_embedding_train = np.load(novel_embedding_train_path)
-	# novel_embedding_test = np.load(novel_embedding_test_path)
+	known_embedding_train = np.load(known_embedding_train_path)
+	known_embedding_test = np.load(known_embedding_test_path)
+	novel_embedding_train = np.load(novel_embedding_train_path)
+	novel_embedding_test = np.load(novel_embedding_test_path)
 
 	print("Loaded embeddings")
 
-	perplexity = 25
-
 	# Visualise the learned embedding via TSNE
-<<<<<<< HEAD
-	visualiser = TSNE(n_components=2, perplexity=30)
-=======
-	visualiser = TSNE(n_components=2, perplexity=perplexity)
->>>>>>> 00944211ddf9d1418846ee8ddba18bbcd02912b7
-	# visualiser = PCA(n_components=2)
+	visualiser = TSNE(n_components=2)
 
 	# Perform TSNE magic
 	all_tsne_train = visualiser.fit_transform(all_embedding_train['embeddings'])
 	all_tsne_test = visualiser.fit_transform(all_embedding_test['embeddings'])
-	# known_tsne_train = visualiser.fit_transform(known_embedding_train['embeddings'])
-	# known_tsne_test = visualiser.fit_transform(known_embedding_test['embeddings'])
-	# novel_tsne_train = visualiser.fit_transform(novel_embedding_train['embeddings'])
-	# novel_tsne_test = visualiser.fit_transform(novel_embedding_test['embeddings'])
+	known_tsne_train = visualiser.fit_transform(known_embedding_train['embeddings'])
+	known_tsne_test = visualiser.fit_transform(known_embedding_test['embeddings'])
+	novel_tsne_train = visualiser.fit_transform(novel_embedding_train['embeddings'])
+	novel_tsne_test = visualiser.fit_transform(novel_embedding_test['embeddings'])
 
 	print("Visualisation computed")
 
 	# Plot the results and save to file
-	scatter(all_tsne_train, all_embedding_train['labels'], f"all-training-perplexity-{perplexity}.pdf")
-	scatter(all_tsne_test, all_embedding_test['labels'], f"all-testing-perplexity-{perplexity}.pdf")
-	# scatter(known_tsne_train, known_embedding_train['labels'], "Known categories - TRAINING")
-	# scatter(known_tsne_test, known_embedding_test['labels'], "Known categories - TESTING")
-	# scatter(novel_tsne_train, novel_embedding_train['labels'], "Novel categories - TRAINING")
-	# scatter(novel_tsne_test, novel_embedding_test['labels'], "Novel categories - TESTING")
-
-# Plots the embeddings for a particular openness / fold for all different loss functions to evaluate the contrast in
-# clusterings
-def plotEmbeddingsComparison():
-	# Parameters
-	openness = "50-50"		# How open the problem should be
-	fold = 1				# Which fold to render
-	train = 1				# Whether to render the train or test set embeddings
-	use_set = 0				# Which set to use (full, known, novel)
-	display_class_labels = False # Overlay class labels on the embedding centroids
-
-	# The list of sets
-	data_sets = ["full", "known", "novel"]
-
-	# Filenames
-	train_file = f"train_triplet_cnn_open_cows_temp_x1_{data_sets[use_set]}.npz"
-	test_file = f"test_triplet_cnn_open_cows_temp_x1_{data_sets[use_set]}.npz"
-
-	# On home windows machine
-	base_dir = "D:\\Work\\results"
-
-	# Generate the embeddings directories
-	STL_dir = os.path.join(base_dir, "TL", openness, f"fold_{fold}")
-	RTL_dir = os.path.join(base_dir, "RTL", openness, f"fold_{fold}")
-	SoftmaxTL_dir = os.path.join(base_dir, "SoftmaxTL", openness, f"fold_{fold}")
-	SoftmaxRTL_dir = os.path.join(base_dir, "SoftmaxRTL", openness, f"fold_{fold}")
-
-	print("Loading the embeddings")
-
-	# Load the embeddings
-	STL = {0: np.load(os.path.join(STL_dir, test_file)), 1: np.load(os.path.join(STL_dir, train_file))}
-	RTL = {0: np.load(os.path.join(RTL_dir, test_file)), 1: np.load(os.path.join(RTL_dir, train_file))}
-	SoftmaxTL = {0: np.load(os.path.join(SoftmaxTL_dir, test_file)), 1: np.load(os.path.join(SoftmaxTL_dir, train_file))}
-	SoftmaxRTL = {0: np.load(os.path.join(SoftmaxRTL_dir, test_file)), 1: np.load(os.path.join(SoftmaxRTL_dir, train_file))}
-
-	# Visualise using TSNE
-	visualiser = TSNE(n_components=2)
-
-	print("Performing TSNE")
-
-	# Perform TSNE magic
-	pbar = tqdm(total=4)
-	STL_TSNE = visualiser.fit_transform(STL[train]['embeddings']); pbar.update()
-	RTL_TSNE = visualiser.fit_transform(RTL[train]['embeddings']); pbar.update()
-	SoftmaxTL_TSNE = visualiser.fit_transform(SoftmaxTL[train]['embeddings']); pbar.update()
-	SoftmaxRTL_TSNE = visualiser.fit_transform(SoftmaxRTL[train]['embeddings']); pbar.update()
-	pbar.close()
-
-	print("Rendering the embeddings")
-
-	# Actually render the embeddings
-	pbar = tqdm(total=4)
-	scatter(STL_TSNE, STL[train]['labels'], "TripletLoss.pdf", enable_labels=display_class_labels); pbar.update()
-	scatter(RTL_TSNE, RTL[train]['labels'], "ReciprocalTripletLoss.pdf", enable_labels=display_class_labels); pbar.update()
-	scatter(SoftmaxTL_TSNE, SoftmaxTL[train]['labels'], "SoftmaxTripletLoss.pdf", enable_labels=display_class_labels); pbar.update()
-	scatter(SoftmaxRTL_TSNE, SoftmaxRTL[train]['labels'], "SoftmaxReciprocalTripletLoss.pdf", enable_labels=display_class_labels); pbar.update()
-	pbar.close()
-
-# Plot the embedding for some run, where an example for each class is overlaid at the centroid of its embeddings
-def plotClassOverlay():
-	# Parameters
-	openness = "50-50"		# How open the problem should be
-	fold = 1				# Which fold to render
-	train = 1				# Whether to render the train or test set embeddings
-	use_set = 0				# Which set to use (full, known, novel)
-
-	# The list of sets
-	data_sets = ["full", "known", "novel"]
-
-	# Filenames
-	train_file = f"train_triplet_cnn_open_cows_temp_x1_{data_sets[use_set]}.npz"
-	test_file = f"test_triplet_cnn_open_cows_temp_x1_{data_sets[use_set]}.npz"
-
-	# On home windows machine
-	base_dir = "D:\\Work\\results"
-
-	# Where to find the splits for the dataset
-	splits_dir = "D:\\Work\\ATI-Pilot-Project\\src\\Datasets\\data\\OpenSetCows2019\\2-folds.pkl"
-	with open(splits_dir, 'rb') as handle:
-		splits_dict = pickle.load(handle)
-	splits = splits_dict[fold]
-
-	# Generate the embeddings directories
-	embed_dir = os.path.join(base_dir, "SoftmaxRTL", openness, f"fold_{fold}")
-
-	# Load them
-	embeddings = {0: np.load(os.path.join(embed_dir, test_file)), 1: np.load(os.path.join(embed_dir, train_file))}
-
-	# Visualise using TSNE
-	visualiser = TSNE(n_components=2)
-	reduction = visualiser.fit_transform(embeddings[train]['embeddings'])
-
-	# Directory to find dataset
-	dataset_dir = "D:\\Work\\Data\\OpenCows2020"
-
-	# Load an example for each class
-	class_filepaths = DataUtils.readFolderDatasetFilepathList(dataset_dir)
-
-	# Produce the plot
-	f = plt.figure(figsize=(8, 8))
-	ax = plt.subplot(aspect='equal')
-
-	xs = []
-	ys = []
-	margin = 2
-	zoom = 0.25
-
-	# Plot the images
-	for k, filepaths in class_filepaths.items():
-		# Get the labels
-		labels = embeddings[train]['labels']
-
-		# Compute the centroid
-		x, y = np.median(reduction[labels==int(k), :], axis=0)
-
-		xs.append(x)
-		ys.append(y)
-
-		# Load a random image for this class
-		image = cv2.imread(random.choice(filepaths))
-		image = ImageUtils.proportionallyResizeImageToMax(image, 200, 200)
-		
-		# Plot the example at the centroid
-		imagebox = OffsetImage(image, zoom=zoom)
-
-		if k in splits['unknown']: ab = AnnotationBbox(imagebox, (x, y), bboxprops=dict(color='red'))
-		else: ab = AnnotationBbox(imagebox, (x, y))
-
-		ax.add_artist(ab)
-
-	ax.axis('off')
-	ax.axis('tight')
-	plt.xlim(min(xs)-margin, max(xs)+margin)
-	plt.ylim(min(ys)-margin, max(ys)+margin)
-
-	# plt.show()
-	# plt.tight_layout()
-	plt.savefig("class-overlay.pdf")
+	scatter(all_tsne_train, all_embedding_train['labels'], f"All categories - TRAINING")
+	scatter(all_tsne_test, all_embedding_test['labels'], f"ALL categories - TESTING")
+	scatter(known_tsne_train, known_embedding_train['labels'], "Known categories - TRAINING")
+	scatter(known_tsne_test, known_embedding_test['labels'], "Known categories - TESTING")
+	scatter(novel_tsne_train, novel_embedding_train['labels'], "Novel categories - TRAINING")
+	scatter(novel_tsne_test, novel_embedding_test['labels'], "Novel categories - TESTING")
 
 # Entry method/unit testing method
 if __name__ == '__main__':
+	# Collate command line arguments
+	parser = argparse.ArgumentParser(description='Parameters for visualising the embeddings via TSNE')
+
+	args = parser.parse_args()
+
+	# Let's plot!
 	plotEmbeddings()
-	# plotEmbeddingsComparison()
-	# plotClassOverlay()

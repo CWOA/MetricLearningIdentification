@@ -16,7 +16,7 @@ from torch import optim
 from torch.utils import data
 from torch.autograd import Variable
 
-# My libraries
+# Local libraries
 from utilities.loss import *
 from utilities.utils import *
 from utilities.mining_utils import *
@@ -135,8 +135,8 @@ def trainFold(args, fold=0):
 			images_pos = Variable(images_pos.cuda())
 			images_neg = Variable(images_neg.cuda())
 		   
-			# Zero our optimiser
-			optimizer.zero_grad()
+			# Zero the optimiser
+			optimiser.zero_grad()
 
 			# Get the embeddings/predictions for each
 			if "Softmax" in args.loss_function:
@@ -152,12 +152,12 @@ def trainFold(args, fold=0):
 
 			# Backprop and optimise
 			loss.backward()
-			optimizer.step()
+			optimiser.step()
 			global_step += 1
 
 			# Log the loss if its time to do so
 			if global_step % args.logs_freq == 0:
-				if args.softmax_enabled:
+				if "Softmax" in args.loss_function:
 					log_loss(	epoch, args.n_epoch, global_step, 
 								loss_mean=loss.item(), 
 								loss_triplet=triplet_loss.item(), 
@@ -181,21 +181,46 @@ def trainFold(args, fold=0):
 # Main/entry method
 if __name__ == '__main__':
 	# Collate command line arguments
-	parser = argparse.ArgumentParser(description='Hyperparams')
-	parser.add_argument('--dataset', nargs='?', type=str, default='OpenSetCows2020',
-						help='Dataset to use')
-	parser.add_argument('--img_rows', nargs='?', type=int, default=224, 
-						help='Height of the input image')
-	parser.add_argument('--img_cols', nargs='?', type=int, default=224, 
-						help='Height of the input image')
-	parser.add_argument('--id', nargs='?', type=str, default='x1',
+	parser = argparse.ArgumentParser(description='Parameters for network training')
+
+	# File configuration
+	parser.add_argument('--id', nargs='?', type=str, default='open_cows',
 						help='Experiment identifier')
-	parser.add_argument('--embedding_size', nargs='?', type=int, default=128, 
-						help='dense layer size for inference')
+	parser.add_argument('--out_path', type=str, default="", required=True,
+						help="Path to folder to store results in")
+	parser.add_argument('--folds_file', type=str, default="", required=True
+						help="Path to json file containing folds")
+
+	# Core settings
+	parser.add_argument('--num_folds', type=int, default=1,
+						help="Number of folds to cross validate across")
+	parser.add_argument('--fold_number', type=int, default=0,
+						help="The fold number to START at")
+	parser.add_argument('--dataset', type=str, default='OpenSetCows2020',
+						help='Which dataset to use')
+	parser.add_argument('--model', type=str, default='TripletResnetSoftmax',
+						help='Which model to use: [TripletResnetSoftmax, TripletResnet]')
+	parser.add_argument('--triplet_selection', type=str, default='HardestNegative',
+						help='Which triplet selection method to use: [HardestNegative, RandomNegative,\
+						SemihardNegative, AllTriplets]')
+	parser.add_argument('--loss_fn', type=str, default='OnlineReciprocalSoftmaxLoss',
+						help='Which loss function to use: [TripletLoss, TripletSoftmaxLoss, \
+						OnlineTripletLoss, OnlineTripletSoftmaxLoss, OnlineReciprocalTripletLoss, \
+						OnlineReciprocalSoftmaxLoss]')
+
+	# ARE THESE NECESSARY?
 	parser.add_argument('--instances', nargs='?', type=str, default='known',
 						help='Train Dataset split to use [\'full, known, novel\']')
 	parser.add_argument('--instances_to_eval', nargs='?', type=str, default='all',
 						help='Test Dataset split to use [\'full, known, novel, all\']')
+
+	# Hyperparameters
+	parser.add_argument('--img_rows', nargs='?', type=int, default=224, 
+						help='Height of the input image')
+	parser.add_argument('--img_cols', nargs='?', type=int, default=224, 
+						help='Height of the input image')
+	parser.add_argument('--embedding_size', nargs='?', type=int, default=128, 
+						help='dense layer size for inference')
 	parser.add_argument('--n_epoch', nargs='?', type=int, default=500, 
 						help='# of the epochs to train for')
 	parser.add_argument('--batch_size', nargs='?', type=int, default=16,
@@ -204,24 +229,15 @@ if __name__ == '__main__':
 						help="Optimiser learning rate")
 	parser.add_argument('--weight_decay', type=float, default=1e-4,
 						help="Weight decay")
-	parser.add_argument('--ckpt_path', nargs='?', type=str, default='.',
-						help='Path to save checkpoints')
+	parser.add_argument('--triplet_margin', type=float, default=0.5,
+						help="Margin parameter for triplet loss")
+
+	# Training settings
 	parser.add_argument('--eval_freq', nargs='?', type=int, default=2,
 						help='Frequency for evaluating model [epochs num]')
 	parser.add_argument('--logs_freq', nargs='?', type=int, default=20,
 						help='Frequency for saving logs [steps num]')
-	parser.add_argument('--fold_number', type=int, default=0,
-						help="The fold number to START at")
-	parser.add_argument('--num_folds', type=int, default=1,
-						help="Number of folds to cross validate across")
-	parser.add_argument('--folds_file', type=str, default="",
-						help="Path to json file containing folds")
-	parser.add_argument('--out_path', type=str, default="", required=True,
-						help="Path to folder to store results in")
-	parser.add_argument('--softmax_enabled', type=bool, default=False,
-						help="Is softmax enabled for joint loss function")
-	parser.add_argument('--triplet_margin', type=float, default=0.5,
-						help="Margin parameter for triplet loss")
+
 	args = parser.parse_args()
 
 	# Let's cross validate!

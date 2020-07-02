@@ -1,36 +1,32 @@
+# Core libraries
+import numpy as np
 from itertools import combinations
 
-import numpy as np
+# PyTorch
 import torch
 
 """
 File contains a selection of mining utilities for selecting triplets
+Code is adapted from - https://github.com/adambielski/siamese-triplet
 """
 
+# Find the distance between two vectors
 def pdist(vectors):
     distance_matrix = -2 * vectors.mm(torch.t(vectors)) + vectors.pow(2).sum(dim=1).view(1, -1) + vectors.pow(2).sum(
         dim=1).view(-1, 1)
     return distance_matrix
 
+# Should return indices of selected anchors, positive and negative samples
+# e.g. np array of shape [N_triplets x 3]
 class TripletSelector:
-    """
-    Implementation should return indices of anchors, positive and negative samples
-    return np array of shape [N_triplets x 3]
-    """
-
     def __init__(self):
         pass
 
     def get_triplets(self, embeddings, labels):
         raise NotImplementedError
 
-
+# Return all possible triplets
 class AllTripletSelector(TripletSelector):
-    """
-    Returns all possible triplets
-    May be impractical in most cases
-    """
-
     def __init__(self):
         super(AllTripletSelector, self).__init__()
 
@@ -52,30 +48,23 @@ class AllTripletSelector(TripletSelector):
 
         return torch.LongTensor(np.array(triplets))
 
-
 def hardest_negative(loss_values):
     hard_negative = np.argmax(loss_values)
     return hard_negative if loss_values[hard_negative] > 0 else None
-
 
 def random_hard_negative(loss_values):
     hard_negatives = np.where(loss_values > 0)[0]
     return np.random.choice(hard_negatives) if len(hard_negatives) > 0 else None
 
-
 def semihard_negative(loss_values, margin):
     semihard_negatives = np.where(np.logical_and(loss_values < margin, loss_values > 0))[0]
     return np.random.choice(semihard_negatives) if len(semihard_negatives) > 0 else None
 
-
+# For each positive pair, takes the hardest negative sample (with the greatest triplet loss value) to create a triplet
+# Margin should match the margin used in triplet loss.
+# negative_selection_fn should take array of loss_values for a given anchor-positive pair and all negative samples
+# and return a negative index for that pair
 class FunctionNegativeTripletSelector(TripletSelector):
-    """
-    For each positive pair, takes the hardest negative sample (with the greatest triplet loss value) to create a triplet
-    Margin should match the margin used in triplet loss.
-    negative_selection_fn should take array of loss_values for a given anchor-positive pair and all negative samples
-    and return a negative index for that pair
-    """
-
     def __init__(self, margin, negative_selection_fn, cpu=True):
         super(FunctionNegativeTripletSelector, self).__init__()
         self.cpu = cpu
@@ -112,7 +101,6 @@ class FunctionNegativeTripletSelector(TripletSelector):
                         triplets.append([anchor_positive[0], anchor_positive[1], hard_negative])
 
         return torch.LongTensor(np.array(triplets)), len(triplets)
-
 
 def HardestNegativeTripletSelector(margin=0, cpu=False): return FunctionNegativeTripletSelector(margin=margin,
                                                                                  negative_selection_fn=hardest_negative,

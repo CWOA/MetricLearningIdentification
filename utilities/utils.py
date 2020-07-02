@@ -1,28 +1,23 @@
 # Core libraries
 import os
 import sys
-import torch
 import argparse
+import subprocess
 import numpy as np
+from PIL import Image
+
+# PyTorch stuff
+import torch
 import torch.nn as nn
+from torch import optim
+from torch.utils import data
 import torch.nn.functional as F
+from torch.autograd import Variable
 
-import matplotlib
-matplotlib.use('agg')
-import matplotlib.pyplot as plt
-import random
-
-import sys, os
 sys.path.append('.')
 sys.path.append('..')
 
-from torch.autograd import Variable
-from torch.utils import data
-from torch import optim
-
-import subprocess
-import yaml
-
+# Global variables to keep track of training progress
 losses_softmax = []
 losses_triplet = []
 losses_rec = []
@@ -30,7 +25,6 @@ losses_mean = []
 accuracies_all = []
 accuracies_known = []
 accuracies_novel = []
-
 
 losses = [losses_softmax, losses_triplet, losses_rec, losses_mean]
 losses_id = ["loss_softmax", "loss_triplet", "loss_rec", "loss_mean"]
@@ -75,10 +69,10 @@ def show_setup(args, n_classes, optimizer, loss_fn):
     print("Optimizer: {}".format(optimizer))
     print("Loss function: {}".format(loss_fn))
 
-
     ID = "Model: {} \n Training on: {} \n Number of Classes: {} \n Epochs: {} \n Optimizer: {} \n Loss function: {} ".format(args.arch, 
         args.dataset, n_classes,args.n_epoch, optimizer, loss_fn)
 
+# Log information 
 def log_loss(epoch, total_epochs, step, loss_softmax=None, loss_triplet=None, loss_rec=None, loss_mean=None):
     global steps, losses_softmax, losses_triplet, losses_rec, losses_mean, losses, args_local, ID
 
@@ -103,6 +97,7 @@ def log_loss(epoch, total_epochs, step, loss_softmax=None, loss_triplet=None, lo
         np.savez("{}/{}_{}_train_log_{}".format(args_local.ckpt_path, args_local.dataset, args_local.arch, args_local.id),  steps=steps, losses_softmax=losses_softmax, 
             losses_triplet=losses_triplet, losses_rec=losses_rec, losses_mean=losses_mean, ID=ID)
 
+# Evaluate the current model state
 def eval_model(fold, fold_file, step, sets):
     global ckpt_full_path
     global args_local
@@ -159,3 +154,55 @@ def eval_model(fold, fold_file, step, sets):
             accuracies_known=accuracies_known, accuracies_novel=accuracies_novel, ID=ID)
 
     return accuracy_all
+
+# Create a sorted list of all files with a given extension at a given directory
+# If full_path is true, it will return the complete path to that file
+def allFilesAtDirWithExt(directory, file_extension, full_path=True):
+    # Make sure we're looking at a folder
+    assert os.path.isdir(directory)
+
+    # Gather the files inside
+    if full_path:
+        files = [os.path.join(directory, x) for x in sorted(os.listdir(directory)) if x.endswith(file_extension)]
+    else:
+        files = [x for x in sorted(os.listdir(directory)) if x.endswith(file_extension)]
+
+    return files
+
+# Similarly, create a sorted list of all folders at a given directory
+def allFoldersAtDir(directory, full_path=True):
+    # Make sure we're looking at a folder
+    if not os.path.isdir(directory): print(directory)
+    assert os.path.isdir(directory)
+
+    # Find all the folders
+    if full_path:
+        folders = [os.path.join(directory, x) for x in sorted(os.listdir(directory)) if os.path.isdir(os.path.join(directory, x))]
+    else:
+        folders = [x for x in sorted(os.listdir(directory)) if os.path.isdir(os.path.join(directory, x))]
+
+    return folders
+
+# Load an image into memory, pad it to img size with a black background
+def loadResizeImage(img_path, size):      
+    # Load the image
+    img = Image.open(img_path)
+
+    # Keep the original image size
+    old_size = img.size
+
+    # Compute resizing ratio
+    ratio = float(size[0])/max(old_size)
+    new_size = tuple([int(x*ratio) for x in old_size])
+
+    # Actually resize it
+    img = img.resize(new_size, Image.ANTIALIAS)
+
+    # Paste into centre of black padded image
+    new_img = Image.new("RGB", (img_size[0], size[1]))
+    new_img.paste(img, ((size[0]-new_size[0])//2, (size[1]-new_size[1])//2))
+
+    # Convert to numpy
+    new_img = np.array(new_img, dtype=np.uint8)
+
+    return new_img
