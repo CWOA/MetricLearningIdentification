@@ -1,0 +1,9 @@
+## Mac files
+*.DS_Store
+
+*.pyc
+!**/__pycache__/
+
+# Dataset data
+datasets/OpenSetCows2020/images/
+datasets/OpenSetCows2020/splits/
