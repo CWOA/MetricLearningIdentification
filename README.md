@@ -3,16 +3,16 @@
 This repository contains the source code that accompanies our paper "Visual Identification of Individual Holstein Friesian Cattle via Deep Metric Learning" - available at [https://arxiv.org/abs/2006.09205](https://arxiv.org/abs/2006.09205).
 At its core, the code in this repository is adapted and extended (with permission) from Lagunes-Fortiz, M. et al's work on "Learning Discriminative Embeddings for Object Recognition on-the-fly" published in ICRA 2019 - [paper](https://ieeexplore.ieee.org/document/8793715), [source code](https://github.com/MikeLagunes/Supervised-Triplet-Network).
 
-Within our paper, this code relates to section 5 on the "Open-Set Individual Identification via Metric Learning" and the experiments conducted in section 6.
+Within our paper, the code in this repository relates to section 5 on the "Open-Set Individual Identification via Metric Learning" and the experiments conducted in section 6.
 
 ### Installation
 
 Simply clone this repository to your desired local directory: `git clone tbc.git`
 Install any missing requirements via `pip` or `conda`:
 
-[numpy](https://pypi.org/project/numpy/)
-[PyTorch](https://pytorch.org/)
-[tqdm](https://pypi.org/project/tqdm/)
+[numpy](https://pypi.org/project/numpy/),
+[PyTorch](https://pytorch.org/),
+[tqdm](https://pypi.org/project/tqdm/),
 [sklearn](https://pypi.org/project/scikit-learn/)
 
 ### Usage
