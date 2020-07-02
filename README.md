@@ -15,7 +15,7 @@ install any missing requirements via `pip` or `conda`: [numpy](https://pypi.org/
 To replicate the results obtained in our paper, please download the OpenCows2020 dataset at: [https://www.data.bris.ac.uk/tbc](https://www.data.bris.ac.uk/tbc).
 Place the identification folder in `datasets/OpenCows2020/`.
 
-To train the model, use `python train.py -h` to get help with setting command line arguments
+To train the model, use `python train.py -h` to get help with setting command line arguments. To train on your own dataset, write your own dataset class for managing loading the data (similarly to `datasets/OpenCows2020/`), import it into train.py and add the case to the `def setup(args)` method:
 
 To test a trained model, use `python test.py -h` to get help with setting command line arguments
 

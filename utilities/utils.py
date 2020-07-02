@@ -1,3 +1,5 @@
+# Core libraries
+import os
 import sys
 import torch
 import argparse
@@ -49,7 +51,7 @@ File contains a collection of utility functions used for training
 and evaluation
 """
 
-
+# Save a checkpoint as the current state of training
 def save_checkpoint(epoch, model, optimizer, description):
     global ckpt_full_path
 
@@ -62,6 +64,7 @@ def save_checkpoint(epoch, model, optimizer, description):
 
     # print(f"Saved model state to: {ckpt_full_path}")
 
+# Print information about the current training setup
 def show_setup(args, n_classes, optimizer, loss_fn):
     global args_local, ID
     args_local=args
@@ -75,22 +78,6 @@ def show_setup(args, n_classes, optimizer, loss_fn):
 
     ID = "Model: {} \n Training on: {} \n Number of Classes: {} \n Epochs: {} \n Optimizer: {} \n Loss function: {} ".format(args.arch, 
         args.dataset, n_classes,args.n_epoch, optimizer, loss_fn)
-
-def get_instances(args):
-
-    #global args_local
-    #args_local=args
-
-    gt_file = 'loader/dataset_splits.yml'
-
-    #gt_file = '../loader/dataset_splits.yml' #../ for local
-
-    with open(gt_file, 'r') as f:
-        doc = yaml.load(f, Loader=yaml.FullLoader)
-
-    instances = doc[args.dataset][args.instances]
-
-    return instances
 
 def log_loss(epoch, total_epochs, step, loss_softmax=None, loss_triplet=None, loss_rec=None, loss_mean=None):
     global steps, losses_softmax, losses_triplet, losses_rec, losses_mean, losses, args_local, ID

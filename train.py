@@ -4,20 +4,10 @@ import sys
 import argparse
 from tqdm import tqdm
 
-# Local machine
-if os.path.isdir("/home/will"): 
-	sys.path.append("/home/will/work/1-RA/src/")
-	sys.path.append("/home/will/work/1-RA/src/Identifier/Supervisted-Triplet-Network")
-
 # Blue pebble
 if os.path.isdir("/home/ca0513"): 
 	sys.path.append("/home/ca0513/ATI-Pilot-Project/src/")
 	sys.path.append("/home/ca0513/ATI-Pilot-Project/src/Identifier/Supervisted-Triplet-Network")
-
-# Blue crystal phase 4
-if os.path.isdir("/mnt/storage/home/ca0513"):
-	sys.path.append("/mnt/storage/home/ca0513/ATI-Pilot-Project/src/")
-	sys.path.append("/mnt/storage/home/ca0513/ATI-Pilot-Project/src/Identifier/Supervisted-Triplet-Network")
 os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 
 # PyTorch stuff
@@ -35,7 +25,7 @@ from utilities.mining_utils import *
 from datasets.OpenSetCows2020.OpenSetCows2020 import OpenSetCows2020
 
 """
-File descriptor
+File is for training the network via cross fold validation
 """
 
 # Let's cross validate
@@ -56,52 +46,90 @@ def crossValidate(args):
 		# Let's train!
 		trainFold(args, fold=k)
 
-# Train for a single fold
-def trainFold(args, fold=0):
-	# Load the dataset object
-	dataset = OpenSetCows2019(fold, args.folds_file, transform=True, suppress_info=False)
+# Preparations for training for a particular fold
+def setup(args, fold):
+	# Load the selected dataset
+	if args.dataset == "OpenSetCows2020":
+		dataset = OpenSetCows2019(fold, args.folds_file, transform=True, suppress_info=False)
+	elif args.dataset == "ADD YOUR DATASET HERE":
+		pass
+	else:
+		print(f"Dataset choice not recognised, exiting.")
+		sys.exit(1)
+
+	# Print some information about the dataset
 	print(f"Found {dataset.getNumTrainingFiles()} training images, {dataset.getNumTestingFiles()} testing images")
 
-	trainloader = data.DataLoader(dataset, batch_size=args.batch_size, num_workers=6, shuffle=True)
-	
-	# Setup/load the relevant model
-	if args.softmax_enabled: 
+	# Wrap up the data in a PyTorch dataset loader
+	data_loader = data.DataLoader(dataset, batch_size=args.batch_size, num_workers=6, shuffle=True)
+
+	# Setup the selected model
+	if args.model == "TripletResnetSoftmax": 
 		model = triplet_resnet50_softmax(pretrained=True, num_classes=dataset.getNumClasses())
-	else: 
+	if args.model == "TripletResnet": 
 		model = triplet_resnet50(pretrained=True, num_classes=dataset.getNumClasses())
-	
-	# Put it on the GPU
+	else:
+		print(f"Model choice not recognised, exiting.")
+		sys.exit(1)
+
+	# Put the model on the GPU and in training mode
 	model.cuda()
+	model.train()
 
-	# Initialise the optimiser (DISABLE MOMENTUM IF USING RTL)
-	optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9, weight_decay=1e-4)
+	# Setup the triplet selection method
+	if args.triplet_selection == "HardestNegative":
+		triplet_selector = HardestNegativeTripletSelector(margin=args.triplet_margin)
+	elif args.triplet_selection == "RandomNegative":
+		triplet_selector = RandomNegativeTripletSelector(margin=args.triplet_margin)
+	elif args.triplet_selection == "SemihardNegative":
+		triplet_selector = SemihardNegativeTripletSelector(margin=args.triplet_margin)
+	elif args.triplet_selection == "AllTriplets":
+		triplet_selector = AllTripletSelector()
+	else:
+		print(f"Triplet selection choice not recognised, exiting.")
+		sys.exit(1)
 
-	# Initialise the loss function
-	if args.softmax_enabled:
-		# loss_fn = OnlineTripletSoftmaxLoss(	HardestNegativeTripletSelector(), 
-		# 									margin=args.triplet_margin, 
-		# 									lambda_factor=0.01	)
-		loss_fn = OnlineReciprocalSoftmaxLoss(	HardestNegativeTripletSelector(), 
-											margin=args.triplet_margin, 
-											lambda_factor=0.01	)
-	else: 
-		# loss_fn = TripletLoss(margin=args.triplet_margin)
-		# loss_fn = OnlineReciprocalTripletLoss(HardestNegativeTripletSelector())
-		loss_fn = OnlineTripletLoss(args.triplet_margin, HardestNegativeTripletSelector(args.triplet_margin))
-	
-	# Print details about the setup we've employed
+	# Setup the selected loss function
+	if args.loss_function == "TripletLoss":
+		loss_fn = TripletLoss(margin=args.triplet_margin)
+	elif args.loss_function == "TripletSoftmaxLoss":
+		loss_fn = TripletSoftmaxLoss(margin=args.triplet_margin)
+	elif args.loss_function == "OnlineTripletLoss":	
+		loss_fn = OnlineTripletLoss(triplet_selector, margin=args.triplet_margin)
+	elif args.loss_function == "OnlineTripletSoftmaxLoss":
+		loss_fn = OnlineTripletSoftmaxLoss(triplet_selector, margin=args.triplet_margin)
+	elif args.loss_function == "OnlineReciprocalTripletLoss":
+		loss_fn = OnlineReciprocalTripletLoss(triplet_selector)
+	elif args.loss_function == "OnlineReciprocalSoftmaxLoss":
+		loss_fn = OnlineReciprocalSoftmaxLoss(triplet_selector)
+	else:
+		print(f"Loss function choice not recognised, exiting.")
+		sys.exit(1)
+
+	# Create our optimiser, if using reciprocal triplet loss, don't have a momentum component
+	if "Reciprocal" in args.loss_function:
+		optimiser = optim.SGD(model.parameters(), lr=args.learning_rate, weight_decay=optimiser.weight_decay)
+	else:
+		optimiser = optim.SGD(model.parameters(), lr=args.learning_rate, momentum=0.9, weight_decay=optimiser.weight_decay)
+
+	# Print some details about the setup we've employed
 	show_setup(args, dataset.getNumClasses(), optimizer, loss_fn)
 
-	# Setup variables
+	return data_loader, model, loss_fn, optimiser
+
+# Train for a single fold
+def trainFold(args, fold=0):
+	# Let's prepare the objects we need for training based on command line arguments
+	data_loader, model, loss_fn, optimiser = setup(args, fold)
+
+	# Training tracking variables
 	global_step = 0 
 	accuracy_best = 0
-
-	model.train()
 
 	# Main training loop
 	for epoch in tqdm(range(args.n_epoch)):
 		# Mini-batch training loop over the training set
-		for i, (images, images_pos, images_neg, labels, labels_neg) in enumerate(trainloader):
+		for images, images_pos, images_neg, labels, labels_neg in data_loader:
 			# Put the images on the GPU and express them as PyTorch variables
 			images = Variable(images.cuda())
 			images_pos = Variable(images_pos.cuda())
@@ -111,19 +139,14 @@ def trainFold(args, fold=0):
 			optimizer.zero_grad()
 
 			# Get the embeddings/predictions for each
-			if args.softmax_enabled:
+			if "Softmax" in args.loss_function:
 				embed_anch, embed_pos, embed_neg, preds = model(images, images_pos, images_neg)
 			else:
 				embed_anch, embed_pos, embed_neg = model(images, images_pos, images_neg)
 
-			# Calculate loss
-			if args.softmax_enabled:
-				loss, triplet_loss, loss_softmax = loss_fn(	embed_anch, 
-															embed_pos, 
-															embed_neg, 
-															preds, 
-															labels,
-															labels_neg	)
+			# Calculate the loss on this minibatch
+			if "Softmax" in args.loss_function:
+				loss, triplet_loss, loss_softmax = loss_fn(embed_anch, embed_pos, embed_neg, preds, labels, labels_neg)
 			else:
 				loss = loss_fn(embed_anch, embed_pos, embed_neg, labels)
 
@@ -132,7 +155,7 @@ def trainFold(args, fold=0):
 			optimizer.step()
 			global_step += 1
 
-			# Log the loss
+			# Log the loss if its time to do so
 			if global_step % args.logs_freq == 0:
 				if args.softmax_enabled:
 					log_loss(	epoch, args.n_epoch, global_step, 
@@ -141,12 +164,12 @@ def trainFold(args, fold=0):
 								loss_softmax=loss_softmax.item()	)
 				else:
 					log_loss(epoch, args.n_epoch, global_step, loss_mean=loss.item()) 
-			
-		# Save model weights
-		save_checkpoint(epoch, model, optimizer, "temp")
 
 		# Every x epochs, let's evaluate on the validation set
-		if epoch % args.eval_freq  == 0:
+		if epoch % args.eval_freq == 0:
+			# Temporarily save model weights for the evaluation to use
+			save_checkpoint(epoch, model, optimizer, "temp")
+
 			# Test on the validation set
 			accuracy_curr = eval_model(fold, args.folds_file, global_step, args.instances_to_eval)
 
@@ -177,12 +200,16 @@ if __name__ == '__main__':
 						help='# of the epochs to train for')
 	parser.add_argument('--batch_size', nargs='?', type=int, default=16,
 						help='Batch Size')
+	parser.add_argument('--learning_rate', type=float, default=0.001,
+						help="Optimiser learning rate")
+	parser.add_argument('--weight_decay', type=float, default=1e-4,
+						help="Weight decay")
 	parser.add_argument('--ckpt_path', nargs='?', type=str, default='.',
-					help='Path to save checkpoints')
+						help='Path to save checkpoints')
 	parser.add_argument('--eval_freq', nargs='?', type=int, default=2,
-					help='Frequency for evaluating model [epochs num]')
+						help='Frequency for evaluating model [epochs num]')
 	parser.add_argument('--logs_freq', nargs='?', type=int, default=20,
-					help='Frequency for saving logs [steps num]')
+						help='Frequency for saving logs [steps num]')
 	parser.add_argument('--fold_number', type=int, default=0,
 						help="The fold number to START at")
 	parser.add_argument('--num_folds', type=int, default=1,
