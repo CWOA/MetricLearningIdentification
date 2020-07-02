@@ -8,12 +8,7 @@ Within our paper, the code in this repository relates to section 5 on the "Open-
 ### Installation
 
 Simply clone this repository to your desired local directory: `git clone tbc.git`
-Install any missing requirements via `pip` or `conda`:
-
-[numpy](https://pypi.org/project/numpy/),
-[PyTorch](https://pytorch.org/),
-[tqdm](https://pypi.org/project/tqdm/),
-[sklearn](https://pypi.org/project/scikit-learn/)
+Install any missing requirements via `pip` or `conda`: [numpy](https://pypi.org/project/numpy/), [PyTorch](https://pytorch.org/), [tqdm](https://pypi.org/project/tqdm/), [sklearn](https://pypi.org/project/scikit-learn/)
 
 ### Usage
 
