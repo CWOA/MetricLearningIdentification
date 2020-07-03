@@ -135,7 +135,7 @@ def plotEmbeddings():
 	scatter(novel_tsne_train, novel_embedding_train['labels'], "Novel categories - TRAINING")
 	scatter(novel_tsne_test, novel_embedding_test['labels'], "Novel categories - TESTING")
 
-# Entry method/unit testing method
+# Main/entry method
 if __name__ == '__main__':
 	# Collate command line arguments
 	parser = argparse.ArgumentParser(description='Parameters for visualising the embeddings via TSNE')

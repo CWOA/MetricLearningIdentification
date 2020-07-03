@@ -20,6 +20,8 @@ from torch.autograd import Variable
 from utilities.loss import *
 from utilities.utils import *
 from utilities.mining_utils import *
+from models.triplet_resnet import *
+from models.triplet_resnet_softmax import *
 
 # Import our dataset class
 from datasets.OpenSetCows2020.OpenSetCows2020 import OpenSetCows2020
