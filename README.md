@@ -19,9 +19,9 @@ A selective set of weights from the paper are included in the `weights/identific
 
 To train the model, use `python train.py -h` to get help with setting command line arguments. To train on your own dataset, write your own dataset class for managing loading the data (similarly to `datasets/OpenCows2020/`), import it into train.py and add the case to the `def setup(args)` method:
 
-To test a trained model, use `python test.py -h` to get help with setting command line arguments
+To test a trained model, use `python test.py -h` to get help with setting command line arguments.
 
-To visualise any embeddings, use `python utilities/visualse_embeddings.py -h` to get help with setting relevant command line arguments
+To visualise inferred embeddings using T-SNE, use `python utilities/visualse_embeddings.py -h` to get help with setting relevant command line arguments.
 
 ### Citation
 

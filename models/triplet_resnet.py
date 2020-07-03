@@ -1,10 +1,6 @@
 import torch
 import torch.nn as nn
-import math
 import torch.utils.model_zoo as model_zoo
-
-
-__all__ = ['triplet_resnet50']
 
 
 model_urls = {
@@ -94,7 +90,6 @@ class Bottleneck(nn.Module):
 
 
 class Triplet_ResNet(nn.Module):
-
     def __init__(self, block, layers, num_classes=1000, embedding_size=128):
         self.inplanes = 64
         super(Triplet_ResNet, self).__init__()

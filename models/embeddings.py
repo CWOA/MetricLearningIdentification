@@ -1,30 +1,14 @@
+# PyTorch stuff
 import torch
 import torch.nn as nn
-import math
 import torch.utils.model_zoo as model_zoo
 
-
-__all__ = ['embeddings']
-
-
-model_urls = {
-    'resnet18': 'https://download.pytorch.org/models/resnet18-5c106cde.pth',
-    'resnet34': 'https://download.pytorch.org/models/resnet34-333f7ec4.pth',
-    'resnet50': 'https://download.pytorch.org/models/resnet50-19c8e357.pth',
-    'resnet101': 'https://download.pytorch.org/models/resnet101-5d3b4d8f.pth',
-    'resnet152': 'https://download.pytorch.org/models/resnet152-b121ed2d.pth',
-}
-
-
+# 3x3 convolution with padding
 def conv3x3(in_planes, out_planes, stride=1):
-    """3x3 convolution with padding"""
     return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
                      padding=1, bias=False)
 
-
 class BasicBlock(nn.Module):
-    expansion = 1
-
     def __init__(self, inplanes, planes, stride=1, downsample=None):
         super(BasicBlock, self).__init__()
         self.conv1 = conv3x3(inplanes, planes, stride)
@@ -53,12 +37,10 @@ class BasicBlock(nn.Module):
 
         return out
 
-
 class Bottleneck(nn.Module):
-    expansion = 4
-
     def __init__(self, inplanes, planes, stride=1, downsample=None):
         super(Bottleneck, self).__init__()
+        self.expansion = 4
         self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
         self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride,
@@ -92,9 +74,8 @@ class Bottleneck(nn.Module):
 
         return out
 
-
+# Builds the full resnet network
 class resnet50_embeddings(nn.Module):
-
     def __init__(self, block, layers, num_classes=50, embedding_size=128):
         self.inplanes = 64
         super(resnet50_embeddings, self).__init__()
@@ -152,23 +133,17 @@ class resnet50_embeddings(nn.Module):
 
         x = self.fc(x)
         x_embedding = self.fc_embedding(x)
-        # x_softmax = self.fc_softmax(x)
     
         return x_embedding
 
+# Constructs a ResNet-50 model for inferring embeddings
 def embeddings(pretrained=False,  num_classes=50, ckpt_path=False, embedding_size = 128, **kwargs):
-    """Constructs a ResNet-50 model.
-
-    Args:
-        pretrained (bool): If True, returns a model pre-trained on ImageNet
-    """
+    # Define the model
     model = resnet50_embeddings(Bottleneck, [3, 4, 6, 3], embedding_size = embedding_size, num_classes = num_classes, **kwargs)
 
-    # print(f"Loading model weights at: {ckpt_path}")
-
-    weights_init = torch.load(ckpt_path)['model_state']
-
+    # Should we load save model weights
     if pretrained:
+        weights_init = torch.load(ckpt_path)['model_state']
         model.load_state_dict(weights_init)
 
     return model

@@ -1,11 +1,7 @@
+# PyTorch stuff
 import torch
 import torch.nn as nn
-import math
 import torch.utils.model_zoo as model_zoo
-
-
-__all__ = ['triplet_resnet50_softmax']
-
 
 model_urls = {
     'resnet18': 'https://download.pytorch.org/models/resnet18-5c106cde.pth',
@@ -15,16 +11,12 @@ model_urls = {
     'resnet152': 'https://download.pytorch.org/models/resnet152-b121ed2d.pth',
 }
 
-
+# 3x3 convolution with padding
 def conv3x3(in_planes, out_planes, stride=1):
-    """3x3 convolution with padding"""
     return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
                      padding=1, bias=False)
 
-
 class BasicBlock(nn.Module):
-    expansion = 1
-
     def __init__(self, inplanes, planes, stride=1, downsample=None):
         super(BasicBlock, self).__init__()
         self.conv1 = conv3x3(inplanes, planes, stride)
@@ -53,12 +45,10 @@ class BasicBlock(nn.Module):
 
         return out
 
-
 class Bottleneck(nn.Module):
-    expansion = 4
-
     def __init__(self, inplanes, planes, stride=1, downsample=None):
         super(Bottleneck, self).__init__()
+        self.expansion = 4
         self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
         self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride,
@@ -92,9 +82,7 @@ class Bottleneck(nn.Module):
 
         return out
 
-
 class Triplet_ResNet_Softmax(nn.Module):
-
     def __init__(self, block, layers, num_classes=1000):
         self.inplanes = 64
         super(Triplet_ResNet_Softmax, self).__init__()

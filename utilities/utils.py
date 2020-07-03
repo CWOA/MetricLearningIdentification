@@ -206,3 +206,4 @@ def loadResizeImage(img_path, size):
     new_img = np.array(new_img, dtype=np.uint8)
 
     return new_img
+    

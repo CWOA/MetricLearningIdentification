@@ -68,7 +68,7 @@ def test(args):
 
 	# Embeddings/labels to be stored on the testing set
 	output_embedding = np.array([])
-	outputs_embedding = np.zeros((1,args.embedding_size))#128
+	outputs_embedding = np.zeros((1,args.embedding_size))
 	labels_embedding = np.zeros((1))
 	total = 0
 	correct = 0

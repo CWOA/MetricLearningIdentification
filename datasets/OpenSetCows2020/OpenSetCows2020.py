@@ -14,7 +14,7 @@ from torch.utils import data
 from utilities.utils import *
 
 """
-Descriptor
+Manages loading the dataset into a PyTorch form
 """
 
 class OpenSetCows2020(data.Dataset):
