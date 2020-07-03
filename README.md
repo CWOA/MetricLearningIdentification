@@ -4,7 +4,7 @@ This repository contains the source code that accompanies our paper "Visual Iden
 At its core, the code in this repository is adapted and extended (with permission) from Lagunes-Fortiz, M. et al's work on "Learning Discriminative Embeddings for Object Recognition on-the-fly" published in ICRA 2019 - [paper](https://ieeexplore.ieee.org/document/8793715), [source code](https://github.com/MikeLagunes/Supervised-Triplet-Network).
 
 Within our paper, the code in this repository relates to section 5 on the "Open-Set Individual Identification via Metric Learning" and the experiments conducted in section 6.
-A selective set of the highest-performing weights from both the detection experiments and identificaiton experiments are included in this repository at `weights/detection_and_localisation` and `weights/identification`, respectively.
+A selective set of the highest-performing weights from the experiments on open-set identification are included in this repository at `weights`.
 
 ### Installation
 
@@ -15,9 +15,9 @@ install any missing requirements via `pip` or `conda`: [numpy](https://pypi.org/
 
 To replicate the results obtained in our paper, please download the OpenCows2020 dataset at: [https://www.data.bris.ac.uk/data](https://www.data.bris.ac.uk/data) and searching for `OpenCows2020`.
 Place the identification folder in `datasets/OpenCows2020/`.
-A selective set of weights from the paper are included in the `weights/identificaiton` folder.
+A selective set of weights from the paper are included in the `weights` folder.
 
-To train the model, use `python train.py -h` to get help with setting command line arguments. To train on your own dataset, write your own dataset class for managing loading the data (similarly to `datasets/OpenCows2020/`), import it into train.py and add the case to the `def setup(args)` method:
+To train the model, use `python train.py -h` to get help with setting command line arguments. To train on your own dataset, write your own dataset class for managing loading the data (similarly to `datasets/OpenCows2020/`), import it into `utilities/utils.py` and add the case to the `def selectDataset(args)` method.
 
 To test a trained model, use `python test.py -h` to get help with setting command line arguments.
 

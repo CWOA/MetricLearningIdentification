@@ -12,19 +12,14 @@ os.environ["CUDA_VISIBLE_DEVICES"] = '0'
 
 # PyTorch stuff
 import torch
-from torch import optim
-from torch.utils import data
 from torch.autograd import Variable
 
 # Local libraries
 from utilities.loss import *
-from utilities.utils import *
 from utilities.mining_utils import *
+from utilities.utils import Utilities
 from models.triplet_resnet import *
 from models.triplet_resnet_softmax import *
-
-# Import our dataset class
-from datasets.OpenSetCows2020.OpenSetCows2020 import OpenSetCows2020
 
 """
 File is for training the network via cross fold validation
@@ -37,99 +32,31 @@ def crossValidate(args):
 		print(f"Beginning training for fold {k+1} of {args.num_folds}")
 
 		# Directory for storing data to do with this fold
-		store_dir = os.path.join(args.out_path, f"fold_{k}")
-
-		# Change where to store things
-		args.ckpt_path = store_dir
+		args.fold_out_path = os.path.join(args.out_path, f"fold_{k}")
 
 		# Create a folder in the results folder for this fold as well as to store embeddings
-		os.makedirs(store_dir, exist_ok=True)
+		os.makedirs(args.fold_out_path, exist_ok=True)
+
+		# Store the current fold
+		args.current_fold = k
 
 		# Let's train!
-		trainFold(args, fold=k)
-
-# Preparations for training for a particular fold
-def setup(args, fold):
-	# Load the selected dataset
-	if args.dataset == "OpenSetCows2020":
-		dataset = OpenSetCows2019(fold, args.folds_file, transform=True, suppress_info=False)
-	elif args.dataset == "ADD YOUR DATASET HERE":
-		pass
-	else:
-		print(f"Dataset choice not recognised, exiting.")
-		sys.exit(1)
-
-	# Print some information about the dataset
-	print(f"Found {dataset.getNumTrainingFiles()} training images, {dataset.getNumTestingFiles()} testing images")
-
-	# Wrap up the data in a PyTorch dataset loader
-	data_loader = data.DataLoader(dataset, batch_size=args.batch_size, num_workers=6, shuffle=True)
-
-	# Setup the selected model
-	if args.model == "TripletResnetSoftmax": 
-		model = triplet_resnet50_softmax(pretrained=True, num_classes=dataset.getNumClasses())
-	if args.model == "TripletResnet": 
-		model = triplet_resnet50(pretrained=True, num_classes=dataset.getNumClasses())
-	else:
-		print(f"Model choice not recognised, exiting.")
-		sys.exit(1)
-
-	# Put the model on the GPU and in training mode
-	model.cuda()
-	model.train()
-
-	# Setup the triplet selection method
-	if args.triplet_selection == "HardestNegative":
-		triplet_selector = HardestNegativeTripletSelector(margin=args.triplet_margin)
-	elif args.triplet_selection == "RandomNegative":
-		triplet_selector = RandomNegativeTripletSelector(margin=args.triplet_margin)
-	elif args.triplet_selection == "SemihardNegative":
-		triplet_selector = SemihardNegativeTripletSelector(margin=args.triplet_margin)
-	elif args.triplet_selection == "AllTriplets":
-		triplet_selector = AllTripletSelector()
-	else:
-		print(f"Triplet selection choice not recognised, exiting.")
-		sys.exit(1)
-
-	# Setup the selected loss function
-	if args.loss_function == "TripletLoss":
-		loss_fn = TripletLoss(margin=args.triplet_margin)
-	elif args.loss_function == "TripletSoftmaxLoss":
-		loss_fn = TripletSoftmaxLoss(margin=args.triplet_margin)
-	elif args.loss_function == "OnlineTripletLoss":	
-		loss_fn = OnlineTripletLoss(triplet_selector, margin=args.triplet_margin)
-	elif args.loss_function == "OnlineTripletSoftmaxLoss":
-		loss_fn = OnlineTripletSoftmaxLoss(triplet_selector, margin=args.triplet_margin)
-	elif args.loss_function == "OnlineReciprocalTripletLoss":
-		loss_fn = OnlineReciprocalTripletLoss(triplet_selector)
-	elif args.loss_function == "OnlineReciprocalSoftmaxLoss":
-		loss_fn = OnlineReciprocalSoftmaxLoss(triplet_selector)
-	else:
-		print(f"Loss function choice not recognised, exiting.")
-		sys.exit(1)
-
-	# Create our optimiser, if using reciprocal triplet loss, don't have a momentum component
-	if "Reciprocal" in args.loss_function:
-		optimiser = optim.SGD(model.parameters(), lr=args.learning_rate, weight_decay=optimiser.weight_decay)
-	else:
-		optimiser = optim.SGD(model.parameters(), lr=args.learning_rate, momentum=0.9, weight_decay=optimiser.weight_decay)
-
-	# Print some details about the setup we've employed
-	show_setup(args, dataset.getNumClasses(), optimizer, loss_fn)
-
-	return data_loader, model, loss_fn, optimiser
+		trainFold(args)
 
 # Train for a single fold
-def trainFold(args, fold=0):
+def trainFold(args):
+	# Create a new instance of the utilities class for this fold
+	utils = Utilities(args)
+
 	# Let's prepare the objects we need for training based on command line arguments
-	data_loader, model, loss_fn, optimiser = setup(args, fold)
+	data_loader, model, loss_fn, optimiser = utils.setupForTraining()
 
 	# Training tracking variables
 	global_step = 0 
 	accuracy_best = 0
 
 	# Main training loop
-	for epoch in tqdm(range(args.n_epoch)):
+	for epoch in tqdm(range(args.num_epochs)):
 		# Mini-batch training loop over the training set
 		for images, images_pos, images_neg, labels, labels_neg in data_loader:
 			# Put the images on the GPU and express them as PyTorch variables
@@ -160,24 +87,23 @@ def trainFold(args, fold=0):
 			# Log the loss if its time to do so
 			if global_step % args.logs_freq == 0:
 				if "Softmax" in args.loss_function:
-					log_loss(	epoch, args.n_epoch, global_step, 
-								loss_mean=loss.item(), 
-								loss_triplet=triplet_loss.item(), 
-								loss_softmax=loss_softmax.item()	)
+					utils.logTrainInfo(	epoch, global_step, loss.item(), 
+										loss_triplet=triplet_loss.item(), 
+										loss_softmax=loss_softmax.item()	)
 				else:
-					log_loss(epoch, args.n_epoch, global_step, loss_mean=loss.item()) 
+					utils.logTrainInfo(epoch, global_step, loss.item()) 
 
 		# Every x epochs, let's evaluate on the validation set
 		if epoch % args.eval_freq == 0:
 			# Temporarily save model weights for the evaluation to use
-			save_checkpoint(epoch, model, optimizer, "temp")
+			utils.saveCheckpoint(epoch, model, optimiser, "current")
 
 			# Test on the validation set
-			accuracy_curr = eval_model(fold, args.folds_file, global_step, args.instances_to_eval)
+			accuracy_curr = utils.test(fold, args.folds_file, global_step)
 
 			# Save the model weights as the best if it surpasses the previous best results
 			if accuracy_curr > accuracy_best:
-				save_checkpoint(epoch, model, optimizer, "best")
+				utils.saveCheckpoint(epoch, model, optimizer, "best")
 				accuracy_best = accuracy_curr
 
 # Main/entry method
@@ -186,11 +112,9 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='Parameters for network training')
 
 	# File configuration
-	parser.add_argument('--id', nargs='?', type=str, default='open_cows',
-						help='Experiment identifier')
 	parser.add_argument('--out_path', type=str, default="", required=True,
 						help="Path to folder to store results in")
-	parser.add_argument('--folds_file', type=str, default="", required=True
+	parser.add_argument('--folds_file', type=str, default="", required=True,
 						help="Path to json file containing folds")
 
 	# Core settings
@@ -210,12 +134,6 @@ if __name__ == '__main__':
 						OnlineTripletLoss, OnlineTripletSoftmaxLoss, OnlineReciprocalTripletLoss, \
 						OnlineReciprocalSoftmaxLoss]')
 
-	# ARE THESE NECESSARY?
-	parser.add_argument('--instances', nargs='?', type=str, default='known',
-						help='Train Dataset split to use [\'full, known, novel\']')
-	parser.add_argument('--instances_to_eval', nargs='?', type=str, default='all',
-						help='Test Dataset split to use [\'full, known, novel, all\']')
-
 	# Hyperparameters
 	parser.add_argument('--img_rows', nargs='?', type=int, default=224, 
 						help='Height of the input image')
@@ -223,7 +141,7 @@ if __name__ == '__main__':
 						help='Height of the input image')
 	parser.add_argument('--embedding_size', nargs='?', type=int, default=128, 
 						help='dense layer size for inference')
-	parser.add_argument('--n_epoch', nargs='?', type=int, default=500, 
+	parser.add_argument('--num_epochs', nargs='?', type=int, default=500, 
 						help='# of the epochs to train for')
 	parser.add_argument('--batch_size', nargs='?', type=int, default=16,
 						help='Batch Size')
