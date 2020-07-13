@@ -13,7 +13,7 @@ install any missing requirements via `pip` or `conda`: [numpy](https://pypi.org/
 
 ### Usage
 
-To replicate the results obtained in our paper, please download the OpenCows2020 dataset at: [https://www.data.bris.ac.uk/data](https://www.data.bris.ac.uk/data) and searching for `OpenCows2020`.
+To replicate the results obtained in our paper, please download the OpenCows2020 dataset at: [https://data.bris.ac.uk/data/dataset/10m32xl88x2b61zlkkgz3fml17](https://data.bris.ac.uk/data/dataset/10m32xl88x2b61zlkkgz3fml17).
 Place the contents (two folders: `images` and `splits`) of the `identification` folder in `datasets/OpenCows2020/`.
 A selective set of weights from the paper are included in the `weights` folder.
 
