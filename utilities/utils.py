@@ -176,7 +176,8 @@ class Utilities:
             dataset = OpenSetCows2020(  args.current_fold, 
                                         args.folds_file, 
                                         split=split, 
-                                        transform=True, 
+                                        transform=True,
+                                        combine=True,
                                         suppress_info=False )
         elif args.dataset == "ADD YOUR DATASET HERE":
             pass

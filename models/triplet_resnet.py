@@ -159,12 +159,8 @@ class Triplet_ResNet(nn.Module):
 
         return embedding_vec_1, embedding_vec_2, embedding_vec_3
 
+# Construct resnet50 model, if pretrained (bool) returns a model pre-trained on imagenet
 def triplet_resnet50(pretrained=False,  num_classes=1000, embedding_size=128, **kwargs):
-    """Constructs a ResNet-50 model.
-
-    Args:
-        pretrained (bool): If True, returns a model pre-trained on ImageNet
-    """
     model = Triplet_ResNet(Bottleneck, [3, 4, 6, 3], num_classes=1000, **kwargs)
 
     weights_imagenet = model_zoo.load_url(model_urls['resnet50'])

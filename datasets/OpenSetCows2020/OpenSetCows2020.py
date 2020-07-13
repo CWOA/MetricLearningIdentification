@@ -47,7 +47,7 @@ class OpenSetCows2020(data.Dataset):
 		# Whether we should just load everything
 		self.__combine = combine
 
-		# Whether we're after known or unknown categories
+		# Whether we're after known or unknown categories, irrelevant if combine is true
 		self.__known = known
 
 		# Whether to transform images/labels into pyTorch form

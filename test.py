@@ -31,15 +31,13 @@ evaluating its classification performance using KNN
 
 # For a trained model, let's evaluate it
 def evaluateModel(args):
-	# TODO: properly select known/unknown and combine True/False
-
 	# Load the relevant datasets
 	train_dataset = Utilities.selectDataset(args, True)
 	test_dataset = Utilities.selectDataset(args, False)
 
 	# Get the embeddings and labels of the training set and testing set
-	train_embeddings, train_labels = inferEmbeddings(args, train_dataset)
-	test_embeddings, test_labels = inferEmbeddings(args, test_dataset)
+	train_embeddings, train_labels = inferEmbeddings(args, train_dataset, "train")
+	test_embeddings, test_labels = inferEmbeddings(args, test_dataset, "test")
 
 	# Classify them
 	accuracy = KNNAccuracy(train_embeddings, train_labels, test_embeddings, test_labels)
@@ -71,8 +69,8 @@ def KNNAccuracy(train_embeddings, train_labels, test_embeddings, test_labels, n_
 
     return accuracy
 
-# Infer the embeddings for a given test/evaluation set
-def inferEmbeddings(args):
+# Infer the embeddings for a given dataset
+def inferEmbeddings(args, dataset, split):
 	# Wrap up the dataset in a PyTorch dataset loader
 	data_loader = data.DataLoader(dataset, batch_size=args.batch_size, num_workers=6, shuffle=False)
 
@@ -112,7 +110,7 @@ def inferEmbeddings(args):
 	# If we're supposed to be saving the embeddings and labels to file
 	if args.save_embeddings:
 		# Construct the save path
-		save_path = os.path.join(args.fold_out_path, "embeddings.npz")
+		save_path = os.path.join(args.fold_out_path, f"{split}_embeddings.npz")
 		
 		# Save the embeddings to a numpy array
 		np.savez(save_path,  embeddings=outputs_embedding, labels=labels_embedding)

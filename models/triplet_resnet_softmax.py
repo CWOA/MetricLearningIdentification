@@ -153,12 +153,8 @@ class Triplet_ResNet_Softmax(nn.Module):
 
         return embedding_vec_1, embedding_vec_2, embedding_vec_3, torch.cat((softmax_vec_1, softmax_vec_2, softmax_vec_3), 0)
 
+# Construct resnet50 model, if pretrained (bool) returns a model pre-trained on imagenet
 def triplet_resnet50_softmax(pretrained=False,  num_classes=50, embedding_size=128, **kwargs):
-    """Constructs a ResNet-50 model.
-
-    Args:
-        pretrained (bool): If True, returns a model pre-trained on ImageNet
-    """
     model = Triplet_ResNet_Softmax(Bottleneck, [3, 4, 6, 3], num_classes=num_classes, **kwargs)
 
     if pretrained:
