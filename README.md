@@ -4,17 +4,18 @@ This repository contains the source code that accompanies our paper "Visual Iden
 At its core, the code in this repository is adapted and extended (with permission) from Lagunes-Fortiz, M. et al's work on "Learning Discriminative Embeddings for Object Recognition on-the-fly" published in ICRA 2019 - [paper](https://ieeexplore.ieee.org/document/8793715), [source code](https://github.com/MikeLagunes/Supervised-Triplet-Network).
 
 Within our paper, the code in this repository relates to section 5 on the "Open-Set Individual Identification via Metric Learning" and the experiments conducted in section 6.
-A selective set of the highest-performing weights from the experiments on open-set identification are included in this repository at `weights`.
+A selective set of the highest-performing weights from the experiments on open-set identification are included in this repository at `weights/`.
 
 ### Installation
 
 Simply clone this repository to your desired local directory: `git clone https://github.com/CWOA/MetricLearningIdentification.git` and
-install any missing requirements via `pip` or `conda`: [numpy](https://pypi.org/project/numpy/), [PyTorch](https://pytorch.org/), [tqdm](https://pypi.org/project/tqdm/), [sklearn](https://pypi.org/project/scikit-learn/), [seaborn](https://pypi.org/project/seaborn/)
+install any missing requirements via `pip` or `conda`: [numpy](https://pypi.org/project/numpy/), [PyTorch](https://pytorch.org/), [tqdm](https://pypi.org/project/tqdm/), [sklearn](https://pypi.org/project/scikit-learn/), [seaborn](https://pypi.org/project/seaborn/).
+This repository requires python 3.6+
 
 ### Usage
 
 To replicate the results obtained in our paper, please download the OpenCows2020 dataset at: [https://data.bris.ac.uk/data/dataset/10m32xl88x2b61zlkkgz3fml17](https://data.bris.ac.uk/data/dataset/10m32xl88x2b61zlkkgz3fml17).
-Place the contents (two folders: `images` and `splits`) of the `identification` folder in `datasets/OpenCows2020/`.
+Place the contents (two folders: `images/` and `splits/`) of the `identification` folder in `datasets/OpenCows2020/`.
 A selective set of weights from the paper are included in the `weights` folder.
 
 To train the model, use `python train.py -h` to get help with setting command line arguments. 
