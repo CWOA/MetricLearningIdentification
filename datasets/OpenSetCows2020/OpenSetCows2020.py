@@ -11,7 +11,7 @@ import torch
 from torch.utils import data
 
 # Local libraries
-from utilities.utils import *
+from utilities.ioutils import *
 
 """
 Manages loading the dataset into a PyTorch form
@@ -33,10 +33,10 @@ class OpenSetCows2020(data.Dataset):
 		"""
 
 		# The root directory for the dataset itself
-		self.__root = "/datasets/OpenSetCows2020"
+		self.__root = "datasets/OpenSetCows2020"
 
 		# The fold we're currently considering
-		self.__fold = fold
+		self.__fold = str(fold)
 
 		# The file containing the category splits for this fold
 		self.__fold_file = fold_file
@@ -54,8 +54,8 @@ class OpenSetCows2020(data.Dataset):
 		self.__transform = transform
 
 		# The directory containing actual imagery
-		self.__train_images_dir = os.path.join(self.__root, "split/train")
-		self.__test_images_dir = os.path.join(self.__root, "split/test")
+		self.__train_images_dir = os.path.join(self.__root, "images/train")
+		self.__test_images_dir = os.path.join(self.__root, "images/test")
 
 		# Retrieve the number of classes from these
 		self.__train_folders = allFoldersAtDir(self.__train_images_dir)
@@ -64,11 +64,11 @@ class OpenSetCows2020(data.Dataset):
 		self.__num_classes = len(self.__train_folders)
 
 		# Load the folds dictionary containing known and unknown categories for each fold
-		if os.path.exists(os.path.join(self.__root, self.__fold_file)):
-			with open(os.path.join(self.__root, self.__fold_file), 'rb') as handle:
+		if os.path.exists(self.__fold_file):
+			with open(self.__fold_file, 'rb') as handle:
 				self.__folds_dict = json.load(handle)
 		else: 
-			print(f"File path doesn't exist: {os.path.join(self.__root, self.__fold_file)}")
+			print(f"File path doesn't exist: {self.__fold_file}")
 			sys.exit(1)
 
 		# A quick check
@@ -162,7 +162,7 @@ class OpenSetCows2020(data.Dataset):
 	# Print stats about the current state of this dataset
 	def printStats(self):
 		print("Loaded the OpenSetCows2019 dataset_____________________________")
-		print(f"Fold = {self.__fold+1}, split = {self.__split}, combine = {self.__combine}, known = {self.__known}")
+		print(f"Fold = {int(self.__fold)+1}, split = {self.__split}, combine = {self.__combine}, known = {self.__known}")
 		print(f"Found {self.__num_classes} categories: {len(self.__folds_dict[self.__fold]['known'])} known, {len(self.__folds_dict[self.__fold]['unknown'])} unknown")
 		print(f"With {len(self.__files['train'])} train images, {len(self.__files['test'])} test images")
 		print(f"Unknown categories {self.__folds_dict[self.__fold]['unknown']}")

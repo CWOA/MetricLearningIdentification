@@ -38,9 +38,10 @@ class BasicBlock(nn.Module):
         return out
 
 class Bottleneck(nn.Module):
+    expansion = 4
+
     def __init__(self, inplanes, planes, stride=1, downsample=None):
         super(Bottleneck, self).__init__()
-        self.expansion = 4
         self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
         self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride,
@@ -137,7 +138,7 @@ class resnet50_embeddings(nn.Module):
         return x_embedding
 
 # Constructs a ResNet-50 model for inferring embeddings
-def embeddings(pretrained=False,  num_classes=50, ckpt_path=False, embedding_size = 128, **kwargs):
+def resnet50(pretrained=False,  num_classes=50, ckpt_path=False, embedding_size = 128, **kwargs):
     # Define the model
     model = resnet50_embeddings(Bottleneck, [3, 4, 6, 3], embedding_size = embedding_size, num_classes = num_classes, **kwargs)
 

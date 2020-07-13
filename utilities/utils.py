@@ -11,7 +11,11 @@ import torch
 from torch import optim
 from torch.utils import data
 
-# Import our dataset class
+# Import our own classes
+from utilities.loss import *
+from utilities.mining_utils import *
+from models.TripletResnet import TripletResnet50
+from models.TripletResnetSoftmax import TripletResnet50Softmax
 from datasets.OpenSetCows2020.OpenSetCows2020 import OpenSetCows2020
 
 """
@@ -38,21 +42,18 @@ class Utilities:
     # Preparations for training for a particular fold
     def setupForTraining(self, args):
         # Retrieve the correct dataset
-        dataset = Utilities.selectDataset(args)
-
-        # Print some information about the dataset
-        print(f"Found {dataset.getNumTrainingFiles()} training images, {dataset.getNumTestingFiles()} testing images")
+        dataset = Utilities.selectDataset(args, True)
 
         # Wrap up the data in a PyTorch dataset loader
         data_loader = data.DataLoader(dataset, batch_size=args.batch_size, num_workers=6, shuffle=True)
 
         # Setup the selected model
         if args.model == "TripletResnetSoftmax": 
-            model = triplet_resnet50_softmax(pretrained=True, num_classes=dataset.getNumClasses())
-        if args.model == "TripletResnet": 
-            model = triplet_resnet50(pretrained=True, num_classes=dataset.getNumClasses())
+            model = TripletResnet50Softmax(pretrained=True, num_classes=dataset.getNumClasses())
+        elif args.model == "TripletResnet": 
+            model = TripletResnet50(pretrained=True, num_classes=dataset.getNumClasses())
         else:
-            print(f"Model choice not recognised, exiting.")
+            print(f"Model choice: \"{args.model}\" not recognised, exiting.")
             sys.exit(1)
 
         # Put the model on the GPU and in training mode
@@ -91,9 +92,9 @@ class Utilities:
 
         # Create our optimiser, if using reciprocal triplet loss, don't have a momentum component
         if "Reciprocal" in args.loss_function:
-            optimiser = optim.SGD(model.parameters(), lr=args.learning_rate, weight_decay=optimiser.weight_decay)
+            optimiser = optim.SGD(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
         else:
-            optimiser = optim.SGD(model.parameters(), lr=args.learning_rate, momentum=0.9, weight_decay=optimiser.weight_decay)
+            optimiser = optim.SGD(model.parameters(), lr=args.learning_rate, momentum=0.9, weight_decay=args.weight_decay)
 
         return data_loader, model, loss_fn, optimiser
 
@@ -122,7 +123,7 @@ class Utilities:
                     accuracies=self.accuracies    )
 
     # Log information 
-    def logTrainInfo(self, epoch, global_step, loss_mean, loss_triplet=None, loss_softmax=None):
+    def logTrainInfo(self, epoch, step, loss_mean, loss_triplet=None, loss_softmax=None):
         # Add to our arrays
         self.loss_steps.append(step)
         self.losses_mean.append(loss_mean)
@@ -130,9 +131,9 @@ class Utilities:
         if loss_softmax != None: self.losses_softmax.append(loss_softmax)
         
         # Construct a message and print it to the console
-        log_message = f"Epoch [{epoch+1}/{self.args.num_epochs}] Global step: {global_step} | loss_mean: {loss_mean}"
-        if loss_triplet != None: log_message += ", loss_triplet: {losses_triplet}"
-        if loss_softmax != None: log_message += ", loss_softmax: {losses_softmax}"
+        log_message = f"Epoch [{epoch+1}/{self.args.num_epochs}] Global step: {step} | loss_mean: {loss_mean:.5f}"
+        if loss_triplet != None: log_message += f", loss_triplet: {loss_triplet:.5f}"
+        if loss_softmax != None: log_message += f", loss_softmax: {loss_softmax:.5f}"
         print(log_message)
 
         # Save this new data to file
@@ -152,8 +153,11 @@ class Utilities:
 
         # Let's run the command, decode and save the result
         accuracy = subprocess.check_output([run_str], shell=True)
-        accuracy = float(accuracy.decode('utf-8'))
+        accuracy = float(accuracy.decode('utf-8').split("Accuracy=")[1])
         self.accuracies.append(accuracy)
+
+        # Report the accuracy
+        print(f"Accuracy: {accuracy}%")
 
         # Save this accuracies to file
         self.saveLogs()
@@ -185,57 +189,5 @@ class Utilities:
             print(f"Dataset choice not recognised, exiting.")
             sys.exit(1)
 
-    # Create a sorted list of all files with a given extension at a given directory
-    # If full_path is true, it will return the complete path to that file
-    @staticmethod
-    def allFilesAtDirWithExt(directory, file_extension, full_path=True):
-        # Make sure we're looking at a folder
-        assert os.path.isdir(directory)
-
-        # Gather the files inside
-        if full_path:
-            files = [os.path.join(directory, x) for x in sorted(os.listdir(directory)) if x.endswith(file_extension)]
-        else:
-            files = [x for x in sorted(os.listdir(directory)) if x.endswith(file_extension)]
-
-        return files
-
-    # Similarly, create a sorted list of all folders at a given directory
-    @staticmethod
-    def allFoldersAtDir(directory, full_path=True):
-        # Make sure we're looking at a folder
-        if not os.path.isdir(directory): print(directory)
-        assert os.path.isdir(directory)
-
-        # Find all the folders
-        if full_path:
-            folders = [os.path.join(directory, x) for x in sorted(os.listdir(directory)) if os.path.isdir(os.path.join(directory, x))]
-        else:
-            folders = [x for x in sorted(os.listdir(directory)) if os.path.isdir(os.path.join(directory, x))]
-
-        return folders
-
-    # Load an image into memory, pad it to img size with a black background
-    @staticmethod
-    def loadResizeImage(img_path, size):      
-        # Load the image
-        img = Image.open(img_path)
-
-        # Keep the original image size
-        old_size = img.size
-
-        # Compute resizing ratio
-        ratio = float(size[0])/max(old_size)
-        new_size = tuple([int(x*ratio) for x in old_size])
-
-        # Actually resize it
-        img = img.resize(new_size, Image.ANTIALIAS)
-
-        # Paste into centre of black padded image
-        new_img = Image.new("RGB", (img_size[0], size[1]))
-        new_img.paste(img, ((size[0]-new_size[0])//2, (size[1]-new_size[1])//2))
-
-        # Convert to numpy
-        new_img = np.array(new_img, dtype=np.uint8)
-
-        return new_img
+        return dataset
+        

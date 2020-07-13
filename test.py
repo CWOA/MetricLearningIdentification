@@ -12,14 +12,9 @@ import torch
 from torch.utils import data
 from torch.autograd import Variable
 
-# Blue pebble
-if os.path.isdir("/home/ca0513"): 
-	sys.path.append("home/ca0513/ATI-Pilot-Project/src/")
-	os.environ["CUDA_VISIBLE_DEVICES"] = '1'
-
 # Local libraries
-from models.embeddings import *
 from utilities.utils import Utilities
+from models.embeddings import resnet50
 
 # Import our dataset class
 from datasets.OpenSetCows2020.OpenSetCows2020 import OpenSetCows2020
@@ -42,8 +37,8 @@ def evaluateModel(args):
 	# Classify them
 	accuracy = KNNAccuracy(train_embeddings, train_labels, test_embeddings, test_labels)
 
-	# Write them out to the console so that subprocess can pick them up and close
-	sys.stdout.write(accuracy)
+	# Write it out to the console so that subprocess can pick them up and close
+	sys.stdout.write(f"Accuracy={str(accuracy)}")
 	sys.stdout.flush()
 	sys.exit(0)
 
@@ -75,7 +70,7 @@ def inferEmbeddings(args, dataset, split):
 	data_loader = data.DataLoader(dataset, batch_size=args.batch_size, num_workers=6, shuffle=False)
 
 	# Define our embeddings model
-	model = embeddings(pretrained=True,  num_classes=dataset.getNumClasses(), ckpt_path=args.model_path, embedding_size=args.embedding_size)
+	model = resnet50(pretrained=True, num_classes=dataset.getNumClasses(), ckpt_path=args.model_path, embedding_size=args.embedding_size)
 	
 	# Put the model on the GPU and in evaluation mode
 	model.cuda()
@@ -88,7 +83,7 @@ def inferEmbeddings(args, dataset, split):
 	correct = 0
 
 	# Iterate through the testing portion of the dataset and get
-	for images, _, _, labels, _ in tqdm(data_loader):
+	for images, _, _, labels, _ in tqdm(data_loader, desc=f"Inferring {split} embeddings"):
 		# Put the images on the GPU and express them as PyTorch variables
 		images = Variable(images.cuda())
 
@@ -110,7 +105,7 @@ def inferEmbeddings(args, dataset, split):
 	# If we're supposed to be saving the embeddings and labels to file
 	if args.save_embeddings:
 		# Construct the save path
-		save_path = os.path.join(args.fold_out_path, f"{split}_embeddings.npz")
+		save_path = os.path.join(args.save_path, f"{split}_embeddings.npz")
 		
 		# Save the embeddings to a numpy array
 		np.savez(save_path,  embeddings=outputs_embedding, labels=labels_embedding)
@@ -121,23 +116,26 @@ def inferEmbeddings(args, dataset, split):
 if __name__ == '__main__':
 	# Collate command line arguments
 	parser = argparse.ArgumentParser(description='Params')
-	parser.add_argument('--model_path', nargs='?', type=str, default='', 
-						help='Path to the saved model')
-	parser.add_argument('--dataset', nargs='?', type=str, default='cow_id', 
-						help='Dataset to use [\'pascal, camvid, ade20k etc\']')
-	parser.add_argument('--batch_size', nargs='?', type=int, default=5, #7 
+
+	# Required arguments
+	parser.add_argument('--model_path', nargs='?', type=str, required=True, 
+						help='Path to the saved model to load weights from')
+	parser.add_argument('--folds_file', type=str, default="", required=True,
+						help="The file containing known/unknown splits")
+	parser.add_argument('--save_path', type=str, required=True,
+						help="Where to store the embeddings")
+
+	parser.add_argument('--dataset', nargs='?', type=str, default='OpenSetCows2020', 
+						help='Which dataset to use')
+	parser.add_argument('--batch_size', nargs='?', type=int, default=16,
 						help='Batch Size')
-	parser.add_argument('--embedding_size', nargs='?', type=int, default=128, #7 
+	parser.add_argument('--embedding_size', nargs='?', type=int, default=128, 
 						help='Size of the dense layer for inference')
 	parser.add_argument('--current_fold', type=int, default=0,
 						help="The current fold we'd like to test on")
-	parser.add_argument('--fold_file', type=str, default="", required=True,
-						help="The file containing known/unknown splits")
-	parser.add_argument('--save_path', type=str, require=True,
-						help="Where to store the embeddings")
 	parser.add_argument('--save_embeddings', type=bool, default=True,
 						help="Should we save the embeddings to file")
 	args = parser.parse_args()
 
 	# Let's infer some embeddings
-	test(args)
+	evaluateModel(args)

@@ -46,9 +46,10 @@ class BasicBlock(nn.Module):
         return out
 
 class Bottleneck(nn.Module):
+    expansion = 4
+
     def __init__(self, inplanes, planes, stride=1, downsample=None):
         super(Bottleneck, self).__init__()
-        self.expansion = 4
         self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
         self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride,
@@ -154,7 +155,7 @@ class Triplet_ResNet_Softmax(nn.Module):
         return embedding_vec_1, embedding_vec_2, embedding_vec_3, torch.cat((softmax_vec_1, softmax_vec_2, softmax_vec_3), 0)
 
 # Construct resnet50 model, if pretrained (bool) returns a model pre-trained on imagenet
-def triplet_resnet50_softmax(pretrained=False,  num_classes=50, embedding_size=128, **kwargs):
+def TripletResnet50Softmax(pretrained=False,  num_classes=50, embedding_size=128, **kwargs):
     model = Triplet_ResNet_Softmax(Bottleneck, [3, 4, 6, 3], num_classes=num_classes, **kwargs)
 
     if pretrained:

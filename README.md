@@ -9,19 +9,23 @@ A selective set of the highest-performing weights from the experiments on open-s
 ### Installation
 
 Simply clone this repository to your desired local directory: `git clone https://github.com/CWOA/MetricLearningIdentification.git` and
-install any missing requirements via `pip` or `conda`: [numpy](https://pypi.org/project/numpy/), [PyTorch](https://pytorch.org/), [tqdm](https://pypi.org/project/tqdm/), [sklearn](https://pypi.org/project/scikit-learn/)
+install any missing requirements via `pip` or `conda`: [numpy](https://pypi.org/project/numpy/), [PyTorch](https://pytorch.org/), [tqdm](https://pypi.org/project/tqdm/), [sklearn](https://pypi.org/project/scikit-learn/), [seaborn](https://pypi.org/project/seaborn/)
 
 ### Usage
 
 To replicate the results obtained in our paper, please download the OpenCows2020 dataset at: [https://www.data.bris.ac.uk/data](https://www.data.bris.ac.uk/data) and searching for `OpenCows2020`.
-Place the identification folder in `datasets/OpenCows2020/`.
+Place the contents (two folders: `images` and `splits`) of the `identification` folder in `datasets/OpenCows2020/`.
 A selective set of weights from the paper are included in the `weights` folder.
 
-To train the model, use `python train.py -h` to get help with setting command line arguments. To train on your own dataset, write your own dataset class for managing loading the data (similarly to `datasets/OpenCows2020/`), import it into `utilities/utils.py` and add the case to the `def selectDataset(args)` method.
+To train the model, use `python train.py -h` to get help with setting command line arguments. 
+A minimal example would be `python train.py --out_path=output/ --folds_file=datasets/OpenSetCows2020/splits/10-90.json`.
+To train on your own dataset, write your own dataset class for managing loading the data (similarly to `datasets/OpenCows2020/`), import it into `utilities/utils.py` and add the case to the `def selectDataset(args)` method.
 
-To test a trained model, use `python test.py -h` to get help with setting command line arguments.
+To test a trained model by inferring embeddings and using KNN to classify them, use `python test.py -h` to get help with setting command line arguments.
+A minimal example would be `python test.py --model_path=output/fold_0/best_model_state.pkl --folds_file=datasets/OpenSetCows2020/splits/10-90.json --save_path=output/fold_0/`.
 
 To visualise inferred embeddings using T-SNE, use `python utilities/visualse_embeddings.py -h` to get help with setting relevant command line arguments.
+A minimal example would be `python utilities/visualise_embeddings.py --embeddings_file=output/fold_0/test_embeddings.npz`
 
 ### Citation
 

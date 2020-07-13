@@ -4,12 +4,6 @@ import sys
 import argparse
 from tqdm import tqdm
 
-# Blue pebble
-if os.path.isdir("/home/ca0513"): 
-	sys.path.append("/home/ca0513/ATI-Pilot-Project/src/")
-	sys.path.append("/home/ca0513/ATI-Pilot-Project/src/Identifier/Supervisted-Triplet-Network")
-os.environ["CUDA_VISIBLE_DEVICES"] = '0'
-
 # PyTorch stuff
 import torch
 from torch.autograd import Variable
@@ -18,8 +12,6 @@ from torch.autograd import Variable
 from utilities.loss import *
 from utilities.mining_utils import *
 from utilities.utils import Utilities
-from models.triplet_resnet import *
-from models.triplet_resnet_softmax import *
 
 """
 File is for training the network via cross fold validation
@@ -49,14 +41,14 @@ def trainFold(args):
 	utils = Utilities(args)
 
 	# Let's prepare the objects we need for training based on command line arguments
-	data_loader, model, loss_fn, optimiser = utils.setupForTraining()
+	data_loader, model, loss_fn, optimiser = utils.setupForTraining(args)
 
 	# Training tracking variables
 	global_step = 0 
 	accuracy_best = 0
 
 	# Main training loop
-	for epoch in tqdm(range(args.num_epochs)):
+	for epoch in tqdm(range(args.num_epochs), desc="Training epochs"):
 		# Mini-batch training loop over the training set
 		for images, images_pos, images_neg, labels, labels_neg in data_loader:
 			# Put the images on the GPU and express them as PyTorch variables
@@ -99,11 +91,11 @@ def trainFold(args):
 			utils.saveCheckpoint(epoch, model, optimiser, "current")
 
 			# Test on the validation set
-			accuracy_curr = utils.test(fold, args.folds_file, global_step)
+			accuracy_curr = utils.test(global_step)
 
 			# Save the model weights as the best if it surpasses the previous best results
 			if accuracy_curr > accuracy_best:
-				utils.saveCheckpoint(epoch, model, optimizer, "best")
+				utils.saveCheckpoint(epoch, model, optimiser, "best")
 				accuracy_best = accuracy_curr
 
 # Main/entry method
@@ -111,7 +103,7 @@ if __name__ == '__main__':
 	# Collate command line arguments
 	parser = argparse.ArgumentParser(description='Parameters for network training')
 
-	# File configuration
+	# File configuration (the only required arguments)
 	parser.add_argument('--out_path', type=str, default="", required=True,
 						help="Path to folder to store results in")
 	parser.add_argument('--folds_file', type=str, default="", required=True,
@@ -129,7 +121,7 @@ if __name__ == '__main__':
 	parser.add_argument('--triplet_selection', type=str, default='HardestNegative',
 						help='Which triplet selection method to use: [HardestNegative, RandomNegative,\
 						SemihardNegative, AllTriplets]')
-	parser.add_argument('--loss_fn', type=str, default='OnlineReciprocalSoftmaxLoss',
+	parser.add_argument('--loss_function', type=str, default='OnlineReciprocalSoftmaxLoss',
 						help='Which loss function to use: [TripletLoss, TripletSoftmaxLoss, \
 						OnlineTripletLoss, OnlineTripletSoftmaxLoss, OnlineReciprocalTripletLoss, \
 						OnlineReciprocalSoftmaxLoss]')

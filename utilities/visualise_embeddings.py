@@ -19,6 +19,9 @@ def scatter(x, labels, filename):
 	# Choose a color palette with seaborn.
 	palette = np.array(sns.color_palette("hls", num_classes+1))
 
+	# Map the colours to different labels
+	label_colours = np.array([palette[int(labels[i])] for i in range(labels.shape[0])])
+
 	# Create our figure/plot
 	f = plt.figure(figsize=(8, 8))
 	ax = plt.subplot(aspect='equal')
@@ -26,7 +29,7 @@ def scatter(x, labels, filename):
 	# Plot the points
 	ax.scatter(	x[:,0], x[:,1], 
 				lw=0, s=40, 
-				c=palette[labels[known==1].astype(np.int)], 
+				c=label_colours, 
 				marker="o")
 
 	# Do some formatting
